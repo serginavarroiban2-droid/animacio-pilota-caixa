@@ -66,9 +66,9 @@ const PhysicsExperiment: React.FC = () => {
   ];
 
   const getStartLines = (w: number, h: number) => ({
-    1: { x: w * 0.05, y: h * 0.15, w: w * 0.70, h: 20 },
-    2: { x: w * 0.30, y: h * 0.15 + 40, w: w * 0.45, h: 20 },
-    3: { x: w * 0.55, y: h * 0.15 + 80, w: w * 0.40, h: 20 }
+    1: { x: w * 0.05, y: 0, w: w * 0.70, h: 20 },
+    2: { x: w * 0.30, y: 40, w: w * 0.45, h: 20 },
+    3: { x: w * 0.55, y: 80, w: w * 0.40, h: 20 }
   });
 
   const resolveBallToBallCollision = (b1: BlueParticle, b2: BlueParticle) => {
@@ -301,7 +301,7 @@ const PhysicsExperiment: React.FC = () => {
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, width, height);
 
-      const textOpacity = Math.max(0, 1 - progressRaw * 2.5);
+      const textOpacity = Math.max(0, 1 - progressRaw * 1.5);
       const anyDotActive = letterDotsRef.current.some(d => d.visible && d.falling);
       
       if (textOpacity > 0 || anyDotActive) {
@@ -315,7 +315,9 @@ const PhysicsExperiment: React.FC = () => {
         const widths = letters.map(l => ctx.measureText(l).width);
         const totalWidth = widths.reduce((a, b) => a + b, 0) + spacing * (letters.length - 1);
         let currentX = width / 2 - totalWidth / 2;
-        const textY = height * 0.65; 
+        
+        // El text puja cap amunt al fer scroll
+        const textY = height * 0.65 - (progressRaw * height * 1.5); 
         
         if (textOpacity > 0) {
           ctx.fillStyle = '#3252B0';
