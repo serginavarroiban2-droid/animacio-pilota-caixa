@@ -3,27 +3,10 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 /**
  * Interfaces per als objectes de física
  */
-interface Ball {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  radius: number;
-}
-
-interface BlueParticle extends Ball {
-  id: number;
-}
-
-interface Square {
-  id: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  color: string;
-  animatedScale: number;
-}
+interface Ball { x: number; y: number; vx: number; vy: number; radius: number; }
+interface BlueParticle extends Ball { id: number; }
+interface Square { id: number; x: number; y: number; width: number; height: number; color: string; animatedScale: number; }
+interface LetterDot { id: string; x: number; y: number; baseX: number; baseY: number; color: string; type: 'circle' | 'accent'; falling: boolean; vy: number; visible: boolean; }
 
 const PhysicsExperiment: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,6 +19,7 @@ const PhysicsExperiment: React.FC = () => {
   const isHoveringBall = useRef(false);
   const isHoveringBlueControl = useRef(false);
   const isHoveringStop = useRef(false);
+  const isHoveringDot = useRef(false);
   const isBlueControlVisible = useRef(true);
   const hoveringSquareId = useRef<number | null>(null);
   const mousePos = useRef({ x: -1000, y: -1000 });
@@ -51,6 +35,17 @@ const PhysicsExperiment: React.FC = () => {
   const blueControlRef = useRef({ x: 0, y: 0, radius: 24 });
   const blueParticlesRef = useRef<BlueParticle[]>([]);
   
+  const letterDotsRef = useRef<LetterDot[]>([
+    { id: 'i1', x: 0, y: 0, baseX: 0, baseY: 0, color: '#B03232', type: 'circle', falling: false, vy: 0, visible: true },
+    { id: 'a', x: 0, y: 0, baseX: 0, baseY: 0, color: '#B09C32', type: 'accent', falling: false, vy: 0, visible: true },
+    { id: 'i2', x: 0, y: 0, baseX: 0, baseY: 0, color: '#3252B0', type: 'circle', falling: false, vy: 0, visible: true },
+  ]);
+
+  const targetScroll = useRef(0);
+  const actualScroll = useRef(0);
+  const scrollProgressRef = useRef(0);
+  const maxScrollRef = useRef(1500);
+
   const GRAVITY = 0.6;
   const BOUNCE = 0.82; 
   const PARTICLE_COUNT = 100;
@@ -70,9 +65,12 @@ const PhysicsExperiment: React.FC = () => {
     { id: 3, x: w * 0.66, y: 0, width: w * 0.34, height: h * 0.74, color: '#3252B0', animatedScale: 1 }
   ];
 
-  /**
-   * Resolució de col·lisió Cercle-Cercle (Stacking)
-   */
+  const getStartLines = (w: number, h: number) => ({
+    1: { x: w * 0.05, y: h * 0.15, w: w * 0.70, h: 20 },
+    2: { x: w * 0.30, y: h * 0.15 + 40, w: w * 0.45, h: 20 },
+    3: { x: w * 0.55, y: h * 0.15 + 80, w: w * 0.40, h: 20 }
+  });
+
   const resolveBallToBallCollision = (b1: BlueParticle, b2: BlueParticle) => {
     const dx = b1.x - b2.x; const dy = b1.y - b2.y;
     const dist = Math.sqrt(dx*dx + dy*dy); const minDist = b1.radius + b2.radius;
@@ -89,9 +87,6 @@ const PhysicsExperiment: React.FC = () => {
     }
   };
 
-  /**
-   * Col·lisió entre Pilota Vermella i Pilotes Blaves
-   */
   const resolveRedToBlueCollision = (red: Ball, blue: BlueParticle) => {
     const dx = blue.x - red.x; const dy = blue.y - red.y;
     const dist = Math.sqrt(dx*dx + dy*dy); const minDist = red.radius + blue.radius;
@@ -102,9 +97,6 @@ const PhysicsExperiment: React.FC = () => {
     }
   };
 
-  /**
-   * Lògica de col·lisions amb quadrats i límits
-   */
   const resolveCollision = (p: Ball, squares: Square[], width: number, height: number, isParticle = false) => {
     const factor = isParticle ? BOUNCE : 1.0;
     if (p.x - p.radius < 0) { p.x = p.radius; p.vx = Math.abs(p.vx) * factor; }
@@ -146,6 +138,7 @@ const PhysicsExperiment: React.FC = () => {
     const handleResize = () => {
       const canvas = canvasRef.current; if (!canvas) return;
       canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+      maxScrollRef.current = window.innerHeight * 1.5;
       const config = getSquaresConfig(canvas.width, canvas.height);
       squaresRef.current = config;
       initialSquares.current = JSON.parse(JSON.stringify(config));
@@ -155,7 +148,33 @@ const PhysicsExperiment: React.FC = () => {
     };
     window.addEventListener('resize', handleResize);
     handleResize();
-    return () => window.removeEventListener('resize', handleResize);
+
+    const handleWheel = (e: WheelEvent) => {
+      targetScroll.current += e.deltaY;
+      if (targetScroll.current < 0) targetScroll.current = 0;
+      if (targetScroll.current > maxScrollRef.current) targetScroll.current = maxScrollRef.current;
+    };
+    
+    let lastTouchY = 0;
+    const handleTouchStart = (e: TouchEvent) => { lastTouchY = e.touches[0].clientY; };
+    const handleTouchMove = (e: TouchEvent) => {
+      const dy = lastTouchY - e.touches[0].clientY;
+      lastTouchY = e.touches[0].clientY;
+      targetScroll.current += dy * 2.5;
+      if (targetScroll.current < 0) targetScroll.current = 0;
+      if (targetScroll.current > maxScrollRef.current) targetScroll.current = maxScrollRef.current;
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+    };
   }, []);
 
   useEffect(() => {
@@ -168,7 +187,38 @@ const PhysicsExperiment: React.FC = () => {
       const ball = ballRef.current; const squares = squaresRef.current; const particles = blueParticlesRef.current;
       const { x: mx, y: my } = mousePos.current;
 
-      if (pendingBlueCount > 0 && expandedSquareId === null) {
+      const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      
+      actualScroll.current += (targetScroll.current - actualScroll.current) * 0.08;
+      let progressRaw = actualScroll.current / maxScrollRef.current;
+      if (progressRaw < 0) progressRaw = 0;
+      if (progressRaw > 1) progressRaw = 1;
+      
+      scrollProgressRef.current = progressRaw;
+      const progress = easeInOutCubic(progressRaw);
+      const physicsOpacity = Math.max(0, (progress - 0.8) * 5); // 0 at 0.8, 1 at 1.0
+
+      if (progress < 0.999) {
+        setIsActive(false);
+        setExpandedSquareId(null);
+        setIsResetting(false);
+        
+        const startLines = getStartLines(width, height);
+        squares.forEach(s => {
+          const start = startLines[s.id as keyof typeof startLines];
+          const end = initialSquares.current.find(ts => ts.id === s.id)!;
+          s.x = start.x + (end.x - start.x) * progress;
+          s.y = start.y + (end.y - start.y) * progress;
+          s.width = start.w + (end.w - start.w) * progress;
+          s.height = start.h + (end.h - start.h) * progress;
+          s.animatedScale = 1.0;
+        });
+        
+        ball.x = initialBallPos.current.x;
+        ball.y = initialBallPos.current.y;
+      }
+
+      if (pendingBlueCount > 0 && expandedSquareId === null && progress > 0.9) {
         spawnTimer.current++;
         if (spawnTimer.current >= SPAWN_INTERVAL) {
           spawnTimer.current = 0;
@@ -184,7 +234,7 @@ const PhysicsExperiment: React.FC = () => {
       isHoveringStop.current = Math.sqrt((mx - stopX)**2 + (my - stopY)**2) < stopR;
 
       let currentHoverId: number | null = null;
-      if (expandedSquareId === null) {
+      if (expandedSquareId === null && progress > 0.99) {
         squares.forEach(s => {
           if (mx >= s.x && mx <= s.x + s.width && my >= s.y && my <= s.y + s.height) currentHoverId = s.id;
           const targetScale = (currentHoverId === s.id) ? 0.94 : 1.0;
@@ -192,6 +242,16 @@ const PhysicsExperiment: React.FC = () => {
         });
       }
       hoveringSquareId.current = currentHoverId;
+
+      isHoveringDot.current = false;
+      if (progressRaw < 0.1) {
+        const fontSize = width * 0.11;
+        letterDotsRef.current.forEach(dot => {
+          if (!dot.visible || dot.falling) return;
+          const dist = Math.sqrt((mx - dot.x)**2 + (my - dot.y)**2);
+          if (dist < fontSize * 0.15) isHoveringDot.current = true;
+        });
+      }
 
       const SUBSTEPS = 3;
       for (let s = 0; s < SUBSTEPS; s++) {
@@ -206,7 +266,7 @@ const PhysicsExperiment: React.FC = () => {
           if (isActive) {
             ball.x += ball.vx / SUBSTEPS; ball.y += ball.vy / SUBSTEPS;
             resolveCollision(ball, squares, width, height, false);
-          } else if (isResetting) {
+          } else if (isResetting && progress > 0.99) {
             let allDone = true;
             squares.forEach((sq) => {
               const t = initialSquares.current.find(ts => ts.id === sq.id);
@@ -240,14 +300,75 @@ const PhysicsExperiment: React.FC = () => {
 
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, width, height);
+
+      const textOpacity = Math.max(0, 1 - progressRaw * 2.5);
+      const anyDotActive = letterDotsRef.current.some(d => d.visible && d.falling);
       
-      particles.forEach(p => {
-        ctx.fillStyle = '#3252B0'; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
-      });
-      if (isBlueControlVisible.current) {
-        ctx.fillStyle = '#3252B0'; ctx.beginPath(); ctx.arc(blueControlRef.current.x, blueControlRef.current.y, animatedBlueRadius.current, 0, Math.PI * 2); ctx.fill();
+      if (textOpacity > 0 || anyDotActive) {
+        const letters = ['h', 'ı', 'd', 'r', 'a', 'u', 'l', 'ı', 'c'];
+        const fontSize = width * 0.12;
+        ctx.save();
+        ctx.font = `900 ${fontSize}px "Montserrat", "Helvetica Neue", "Arial Black", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const spacing = -fontSize * 0.03;
+        const widths = letters.map(l => ctx.measureText(l).width);
+        const totalWidth = widths.reduce((a, b) => a + b, 0) + spacing * (letters.length - 1);
+        let currentX = width / 2 - totalWidth / 2;
+        const textY = height * 0.65; 
+        
+        if (textOpacity > 0) {
+          ctx.fillStyle = '#3252B0';
+          ctx.globalAlpha = textOpacity;
+          letters.forEach((l, i) => {
+            const letterX = currentX + widths[i] / 2;
+            ctx.fillText(l, letterX, textY);
+            
+            if (i === 1) {
+              const dot = letterDotsRef.current.find(d => d.id === 'i1');
+              if (dot && !dot.falling) { dot.baseX = letterX; dot.baseY = textY - fontSize * 0.35; }
+            } else if (i === 4) {
+              const dot = letterDotsRef.current.find(d => d.id === 'a');
+              if (dot && !dot.falling) { dot.baseX = letterX; dot.baseY = textY - fontSize * 0.35; }
+            } else if (i === 7) {
+              const dot = letterDotsRef.current.find(d => d.id === 'i2');
+              if (dot && !dot.falling) { dot.baseX = letterX; dot.baseY = textY - fontSize * 0.35; }
+            }
+            currentX += widths[i] + spacing;
+          });
+        }
+        ctx.restore();
+        
+        letterDotsRef.current.forEach(dot => {
+          if (!dot.visible) return;
+          let opacity = dot.falling ? 1 : textOpacity;
+          if (opacity <= 0) return;
+          
+          if (!dot.falling) {
+            dot.x = dot.baseX;
+            dot.y = dot.baseY;
+          } else {
+            dot.vy += GRAVITY * 0.5;
+            dot.y += dot.vy;
+            if (dot.y > height + 50) dot.visible = false;
+          }
+          
+          ctx.save();
+          ctx.globalAlpha = opacity;
+          ctx.fillStyle = dot.color;
+          if (dot.type === 'circle') {
+            ctx.beginPath();
+            ctx.arc(dot.x, dot.y, fontSize * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (dot.type === 'accent') {
+            const s = fontSize * 0.15;
+            ctx.translate(dot.x, dot.y);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-s/2, -s/2, s, s);
+          }
+          ctx.restore();
+        });
       }
-      ctx.fillStyle = '#B03232'; ctx.beginPath(); ctx.arc(ball.x, ball.y, animatedBallRadius.current, 0, Math.PI * 2); ctx.fill();
 
       const sortedSquares = [...squares];
       if (expandedSquareId !== null) {
@@ -267,6 +388,19 @@ const PhysicsExperiment: React.FC = () => {
         }
         ctx.restore();
       });
+
+      if (physicsOpacity > 0) {
+        ctx.save();
+        ctx.globalAlpha = physicsOpacity;
+        particles.forEach(p => {
+          ctx.fillStyle = '#3252B0'; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
+        });
+        if (isBlueControlVisible.current) {
+          ctx.fillStyle = '#3252B0'; ctx.beginPath(); ctx.arc(blueControlRef.current.x, blueControlRef.current.y, animatedBlueRadius.current, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = '#B03232'; ctx.beginPath(); ctx.arc(ball.x, ball.y, animatedBallRadius.current, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
 
       if (animatedStopRadius.current > 0.5) {
         ctx.save(); ctx.globalAlpha = Math.min(1, animatedStopRadius.current / stopR);
@@ -292,6 +426,23 @@ const PhysicsExperiment: React.FC = () => {
     const mx = (e.clientX - rect.left) * scaleX;
     const my = (e.clientY - rect.top) * scaleY;
     mouseDownPos.current = { x: mx, y: my };
+
+    if (scrollProgressRef.current < 0.1) {
+      let clickedDot = false;
+      const fontSize = canvas.width * 0.12;
+      letterDotsRef.current.forEach(dot => {
+        if (!dot.visible || dot.falling) return;
+        const dist = Math.sqrt((mx - dot.x)**2 + (my - dot.y)**2);
+        if (dist < fontSize * 0.2) {
+          dot.falling = true;
+          dot.vy = -1;
+          clickedDot = true;
+        }
+      });
+      if (clickedDot) return;
+    }
+
+    if (scrollProgressRef.current < 0.99) return;
 
     if (isActive || expandedSquareId !== null) {
       const stopX = canvas.width - 100; const stopY = canvas.height - 100;
@@ -323,7 +474,6 @@ const PhysicsExperiment: React.FC = () => {
       }
       if (mx >= s.x && mx <= s.x + s.width && my >= s.y && my <= s.y + s.height) {
         setActiveSquareId(s.id);
-        // No activem isDragging immediatament: esperem si el ratolí es mou
         pendingDragSquareId.current = s.id;
         dragOffset.current = { x: mx - s.x, y: my - s.y };
         squares.push(squares.splice(i, 1)[0]);
@@ -341,7 +491,6 @@ const PhysicsExperiment: React.FC = () => {
     const my = (e.clientY - rect.top) * scaleY;
     mousePos.current = { x: mx, y: my };
 
-    // Activem el drag quan el ratolí es mou prou (> 8px)
     if (isActive && pendingDragSquareId.current !== null && !isDragging && !isResizing) {
       const dx = mx - mouseDownPos.current.x;
       const dy = my - mouseDownPos.current.y;
@@ -363,7 +512,6 @@ const PhysicsExperiment: React.FC = () => {
     pendingDragSquareId.current = null;
 
     if (activeSquareId !== null && !isResizing && !isDragging && wasPendingClick) {
-      // Clic net sobre un quadrat → expandir sempre
       setIsActive(false);
       setExpandedSquareId(activeSquareId);
     }
@@ -384,8 +532,12 @@ const PhysicsExperiment: React.FC = () => {
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
-        className={`w-full h-full block cursor-default 
-          ${(isBlueControlVisible.current && isHoveringBlueControl.current) || isHoveringBall.current || hoveringSquareId.current !== null || ((isActive || expandedSquareId !== null) && isHoveringStop.current) ? 'cursor-pointer' : ''} 
+        className={`w-full h-full block cursor-default touch-none
+          ${(isBlueControlVisible.current && isHoveringBlueControl.current && scrollProgressRef.current > 0.9) || 
+            (isHoveringBall.current && scrollProgressRef.current > 0.9) || 
+            (hoveringSquareId.current !== null && scrollProgressRef.current > 0.9) || 
+            ((isActive || expandedSquareId !== null) && isHoveringStop.current) ||
+            isHoveringDot.current ? 'cursor-pointer' : ''} 
           ${isActive ? (isDragging ? 'cursor-grabbing' : isResizing ? 'cursor-nwse-resize' : '') : ''}`}
       />
     </div>
