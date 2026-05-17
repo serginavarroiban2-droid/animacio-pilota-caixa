@@ -358,7 +358,7 @@ const PhysicsExperiment: React.FC = () => {
     else if (isResizing) { s.width = Math.max(50, mx - s.x); s.height = Math.max(50, my - s.y); }
   }, [isActive, isDragging, isResizing, activeSquareId]);
 
-  const handleMouseUp = useCallback((e: MouseEvent) => {
+  const handleMouseUp = useCallback(() => {
     const wasPendingClick = pendingDragSquareId.current !== null;
     pendingDragSquareId.current = null;
 
