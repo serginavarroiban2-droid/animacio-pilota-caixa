@@ -209,8 +209,8 @@ const PhysicsExperiment: React.FC = () => {
           const end = initialSquares.current.find(ts => ts.id === s.id)!;
           s.x = start.x + (end.x - start.x) * progress;
           s.y = start.y + (end.y - start.y) * progress;
-          s.width = start.w + (end.w - start.w) * progress;
-          s.height = start.h + (end.h - start.h) * progress;
+          s.width = start.w + (end.width - start.w) * progress;
+          s.height = start.h + (end.height - start.h) * progress;
           s.animatedScale = 1.0;
         });
         
