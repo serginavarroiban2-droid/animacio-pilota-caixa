@@ -14,6 +14,8 @@ const PhysicsExperiment: React.FC = () => {
   const [isActive, setIsActive] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [expandedSquareId, setExpandedSquareId] = useState<number | null>(null);
+  const [isFullyExpanded, setIsFullyExpanded] = useState(false);
+  const isFullyExpandedRef = useRef(false);
   const [pendingBlueCount, setPendingBlueCount] = useState(0);
   
   const [selectedPatternId, _setSelectedPatternId] = useState<string | null>(null);
@@ -36,6 +38,10 @@ const PhysicsExperiment: React.FC = () => {
 
   useEffect(() => {
     setSelectedPatternId(null);
+    if (expandedSquareId === null) {
+      setIsFullyExpanded(false);
+      isFullyExpandedRef.current = false;
+    }
   }, [expandedSquareId]);
 
   const getMondrianPattern = (ctx: CanvasRenderingContext2D) => {
@@ -320,6 +326,10 @@ const PhysicsExperiment: React.FC = () => {
             targetSq.x += (0 - targetSq.x) * 0.1 / SUBSTEPS; targetSq.y += (0 - targetSq.y) * 0.1 / SUBSTEPS;
             targetSq.width += (width - targetSq.width) * 0.1 / SUBSTEPS; targetSq.height += (height - targetSq.height) * 0.1 / SUBSTEPS;
             targetSq.animatedScale += (1.0 - targetSq.animatedScale) * 0.1 / SUBSTEPS;
+            if (targetSq.width > width * 0.96 && targetSq.height > height * 0.96 && !isFullyExpandedRef.current) {
+              isFullyExpandedRef.current = true;
+              setIsFullyExpanded(true);
+            }
           }
         } else {
           if (isActive) {
@@ -636,7 +646,7 @@ const PhysicsExperiment: React.FC = () => {
             isHoveringDot.current ? 'cursor-pointer' : ''} 
           ${isActive ? (isDragging ? 'cursor-grabbing' : isResizing ? 'cursor-nwse-resize' : '') : ''}`}
       />
-      {expandedSquareId !== null && (
+      {isFullyExpanded && (
         <div className="absolute inset-x-0 bottom-12 flex flex-col items-center justify-end pointer-events-none z-20">
           <div className="flex gap-8 pointer-events-auto animate-fade-in">
             {/* Card 1 - Senefa Floral */}
