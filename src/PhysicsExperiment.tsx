@@ -16,7 +16,12 @@ const PhysicsExperiment: React.FC = () => {
   const [expandedSquareId, setExpandedSquareId] = useState<number | null>(null);
   const [pendingBlueCount, setPendingBlueCount] = useState(0);
   
-  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
+  const [selectedPatternId, _setSelectedPatternId] = useState<string | null>(null);
+  const selectedPatternIdRef = useRef<string | null>(null);
+  const setSelectedPatternId = useCallback((id: string | null) => {
+    _setSelectedPatternId(id);
+    selectedPatternIdRef.current = id;
+  }, []);
   const pattern1ImageRef = useRef<HTMLImageElement | null>(null);
   const mondrianPatternRef = useRef<CanvasPattern | null>(null);
   const circlesPatternRef = useRef<CanvasPattern | null>(null);
@@ -437,13 +442,13 @@ const PhysicsExperiment: React.FC = () => {
         const cx = s.x + s.width/2; const cy = s.y + s.height/2;
         ctx.translate(cx, cy); ctx.scale(s.animatedScale, s.animatedScale); ctx.translate(-cx, -cy);
         let filled = false;
-        if (expandedSquareId === s.id && selectedPatternId !== null) {
+        if (expandedSquareId === s.id && selectedPatternIdRef.current !== null) {
           let pat: CanvasPattern | null = null;
-          if (selectedPatternId === 'pat1' && pattern1ImageRef.current) {
+          if (selectedPatternIdRef.current === 'pat1' && pattern1ImageRef.current) {
             pat = ctx.createPattern(pattern1ImageRef.current, 'repeat');
-          } else if (selectedPatternId === 'pat2') {
+          } else if (selectedPatternIdRef.current === 'pat2') {
             pat = getMondrianPattern(ctx);
-          } else if (selectedPatternId === 'pat3') {
+          } else if (selectedPatternIdRef.current === 'pat3') {
             pat = getCirclesPattern(ctx);
           }
           if (pat) {
@@ -617,15 +622,15 @@ const PhysicsExperiment: React.FC = () => {
       />
       {expandedSquareId !== null && (
         <div className="absolute inset-x-0 bottom-12 flex flex-col items-center justify-end pointer-events-none z-20">
-          <div className="flex gap-8 pointer-events-auto animate-fade-in-up">
+          <div className="flex gap-8 pointer-events-auto animate-fade-in">
             {/* Card 1 - Senefa Floral */}
             <button
               onClick={() => setSelectedPatternId('pat1')}
-              className={`w-28 h-28 md:w-32 md:h-32 rounded-2xl border-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-2xl shadow-black/40 hover:shadow-black/60 hover:scale-110 active:scale-95
-                ${selectedPatternId === 'pat1' ? 'border-white scale-105 ring-4 ring-black/20' : 'border-white/50 hover:border-white'}`}
+              className={`w-36 h-36 md:w-44 md:h-44 rounded-none border-0 transition-all duration-300 cursor-pointer overflow-hidden active:scale-95 shadow-black/40
+                ${selectedPatternId === 'pat1' ? 'opacity-100 scale-105 shadow-2xl' : 'opacity-60 hover:opacity-100 shadow-lg hover:scale-105'}`}
               style={{
                 backgroundImage: "url('/senefa1.png')",
-                backgroundSize: '80px',
+                backgroundSize: '100px',
                 backgroundRepeat: 'repeat'
               }}
               title="Senefa Retro Floral"
@@ -634,8 +639,8 @@ const PhysicsExperiment: React.FC = () => {
             {/* Card 2 - Mondrian Bauhaus */}
             <button
               onClick={() => setSelectedPatternId('pat2')}
-              className={`w-28 h-28 md:w-32 md:h-32 rounded-2xl border-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-2xl shadow-black/40 hover:shadow-black/60 hover:scale-110 active:scale-95
-                ${selectedPatternId === 'pat2' ? 'border-white scale-105 ring-4 ring-black/20' : 'border-white/50 hover:border-white'}`}
+              className={`w-36 h-36 md:w-44 md:h-44 rounded-none border-0 transition-all duration-300 cursor-pointer overflow-hidden active:scale-95 shadow-black/40
+                ${selectedPatternId === 'pat2' ? 'opacity-100 scale-105 shadow-2xl' : 'opacity-60 hover:opacity-100 shadow-lg hover:scale-105'}`}
               style={{
                 backgroundColor: '#f8f8f8',
                 backgroundImage: `
@@ -653,8 +658,8 @@ const PhysicsExperiment: React.FC = () => {
             {/* Card 3 - Concentric Retro Circles */}
             <button
               onClick={() => setSelectedPatternId('pat3')}
-              className={`w-28 h-28 md:w-32 md:h-32 rounded-2xl border-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-2xl shadow-black/40 hover:shadow-black/60 hover:scale-110 active:scale-95
-                ${selectedPatternId === 'pat3' ? 'border-white scale-105 ring-4 ring-black/20' : 'border-white/50 hover:border-white'}`}
+              className={`w-36 h-36 md:w-44 md:h-44 rounded-none border-0 transition-all duration-300 cursor-pointer overflow-hidden active:scale-95 shadow-black/40
+                ${selectedPatternId === 'pat3' ? 'opacity-100 scale-105 shadow-2xl' : 'opacity-60 hover:opacity-100 shadow-lg hover:scale-105'}`}
               style={{
                 backgroundColor: '#E5A93C',
                 backgroundImage: 'radial-gradient(circle, #3252B0 8px, #B03232 8px, #B03232 20px, #F0D880 20px, #F0D880 30px, transparent 30px)',
