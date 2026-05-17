@@ -66,9 +66,9 @@ const PhysicsExperiment: React.FC = () => {
   ];
 
   const getStartLines = (w: number, h: number) => ({
-    1: { x: w * 0.05, y: 0, w: w * 0.70, h: 20 },
-    2: { x: w * 0.30, y: 40, w: w * 0.45, h: 20 },
-    3: { x: w * 0.55, y: 80, w: w * 0.40, h: 20 }
+    1: { x: w * 0.05, y: 20, w: w * 0.70, h: 20 },
+    2: { x: w * 0.30, y: 60, w: w * 0.45, h: 20 },
+    3: { x: w * 0.55, y: 100, w: w * 0.40, h: 20 }
   });
 
   const resolveBallToBallCollision = (b1: BlueParticle, b2: BlueParticle) => {
