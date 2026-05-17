@@ -432,17 +432,51 @@ const PhysicsExperiment: React.FC = () => {
       }
 
       const sortedSquares = [...squares];
+      let expandedSquare: Square | null = null;
       if (expandedSquareId !== null) {
         const idx = sortedSquares.findIndex(s => s.id === expandedSquareId);
-        if (idx > -1) sortedSquares.push(sortedSquares.splice(idx, 1)[0]);
+        if (idx > -1) {
+          expandedSquare = sortedSquares.splice(idx, 1)[0];
+        }
       }
 
+      // 1. Dibuixa els quadrats no expandits
       sortedSquares.forEach(s => {
         ctx.save();
         const cx = s.x + s.width/2; const cy = s.y + s.height/2;
         ctx.translate(cx, cy); ctx.scale(s.animatedScale, s.animatedScale); ctx.translate(-cx, -cy);
+        ctx.fillStyle = s.color;
+        ctx.fillRect(s.x, s.y, s.width, s.height);
+        if (isActive && expandedSquareId === null) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'; ctx.beginPath();
+          ctx.moveTo(s.x+s.width, s.y+s.height); ctx.lineTo(s.x+s.width-30, s.y+s.height); ctx.lineTo(s.x+s.width, s.y+s.height-30);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      // 2. Dibuixa les partícules físiques darrere de la pantalla completa
+      if (physicsOpacity > 0) {
+        ctx.save();
+        ctx.globalAlpha = physicsOpacity;
+        particles.forEach(p => {
+          ctx.fillStyle = '#3252B0'; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
+        });
+        if (isBlueControlVisible.current) {
+          ctx.fillStyle = '#3252B0'; ctx.beginPath(); ctx.arc(blueControlRef.current.x, blueControlRef.current.y, animatedBlueRadius.current, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = '#B03232'; ctx.beginPath(); ctx.arc(ball.x, ball.y, animatedBallRadius.current, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+
+      // 3. Dibuixa el quadrat expandit a sobre de les partícules
+      if (expandedSquare) {
+        const s = expandedSquare;
+        ctx.save();
+        const cx = s.x + s.width/2; const cy = s.y + s.height/2;
+        ctx.translate(cx, cy); ctx.scale(s.animatedScale, s.animatedScale); ctx.translate(-cx, -cy);
         let filled = false;
-        if (expandedSquareId === s.id && selectedPatternIdRef.current !== null) {
+        if (selectedPatternIdRef.current !== null) {
           let pat: CanvasPattern | null = null;
           if (selectedPatternIdRef.current === 'pat1' && pattern1ImageRef.current) {
             pat = ctx.createPattern(pattern1ImageRef.current, 'repeat');
@@ -461,24 +495,6 @@ const PhysicsExperiment: React.FC = () => {
           ctx.fillStyle = s.color;
           ctx.fillRect(s.x, s.y, s.width, s.height);
         }
-        if (isActive && expandedSquareId === null) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'; ctx.beginPath();
-          ctx.moveTo(s.x+s.width, s.y+s.height); ctx.lineTo(s.x+s.width-30, s.y+s.height); ctx.lineTo(s.x+s.width, s.y+s.height-30);
-          ctx.closePath(); ctx.fill();
-        }
-        ctx.restore();
-      });
-
-      if (physicsOpacity > 0) {
-        ctx.save();
-        ctx.globalAlpha = physicsOpacity;
-        particles.forEach(p => {
-          ctx.fillStyle = '#3252B0'; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
-        });
-        if (isBlueControlVisible.current) {
-          ctx.fillStyle = '#3252B0'; ctx.beginPath(); ctx.arc(blueControlRef.current.x, blueControlRef.current.y, animatedBlueRadius.current, 0, Math.PI * 2); ctx.fill();
-        }
-        ctx.fillStyle = '#B03232'; ctx.beginPath(); ctx.arc(ball.x, ball.y, animatedBallRadius.current, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
 
