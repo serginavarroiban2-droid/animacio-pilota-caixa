@@ -130,7 +130,7 @@ const PhysicsExperiment: React.FC = () => {
     { id: 3, x: w * 0.66, y: 0, width: w * 0.34, height: h * 0.74, color: '#3252B0', animatedScale: 1 }
   ];
 
-  const getStartLines = (w: number, h: number) => ({
+  const getStartLines = (w: number) => ({
     1: { x: w * 0.05, y: 20, w: w * 0.70, h: 20 },
     2: { x: w * 0.30, y: 60, w: w * 0.45, h: 20 },
     3: { x: w * 0.55, y: 100, w: w * 0.40, h: 20 }
@@ -268,7 +268,7 @@ const PhysicsExperiment: React.FC = () => {
         setExpandedSquareId(null);
         setIsResetting(false);
         
-        const startLines = getStartLines(width, height);
+        const startLines = getStartLines(width);
         squares.forEach(s => {
           const start = startLines[s.id as keyof typeof startLines];
           const end = initialSquares.current.find(ts => ts.id === s.id)!;
