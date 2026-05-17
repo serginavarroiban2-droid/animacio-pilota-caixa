@@ -16,6 +16,60 @@ const PhysicsExperiment: React.FC = () => {
   const [expandedSquareId, setExpandedSquareId] = useState<number | null>(null);
   const [pendingBlueCount, setPendingBlueCount] = useState(0);
   
+  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
+  const pattern1ImageRef = useRef<HTMLImageElement | null>(null);
+  const mondrianPatternRef = useRef<CanvasPattern | null>(null);
+  const circlesPatternRef = useRef<CanvasPattern | null>(null);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = '/senefa1.png';
+    img.onload = () => {
+      pattern1ImageRef.current = img;
+    };
+  }, []);
+
+  useEffect(() => {
+    setSelectedPatternId(null);
+  }, [expandedSquareId]);
+
+  const getMondrianPattern = (ctx: CanvasRenderingContext2D) => {
+    if (mondrianPatternRef.current) return mondrianPatternRef.current;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 120;
+    offscreen.height = 120;
+    const octx = offscreen.getContext('2d')!;
+    octx.fillStyle = '#f8f8f8'; octx.fillRect(0, 0, 120, 120);
+    octx.fillStyle = '#B03232'; octx.fillRect(0, 0, 40, 40);
+    octx.fillStyle = '#B09C32'; octx.fillRect(60, 60, 60, 60);
+    octx.fillStyle = '#3252B0'; octx.fillRect(80, 0, 40, 30);
+    octx.strokeStyle = '#111111'; octx.lineWidth = 6;
+    octx.beginPath();
+    octx.moveTo(0, 40); octx.lineTo(120, 40);
+    octx.moveTo(0, 60); octx.lineTo(120, 60);
+    octx.moveTo(40, 0); octx.lineTo(40, 120);
+    octx.moveTo(60, 0); octx.lineTo(60, 120);
+    octx.stroke();
+    mondrianPatternRef.current = ctx.createPattern(offscreen, 'repeat');
+    return mondrianPatternRef.current;
+  };
+
+  const getCirclesPattern = (ctx: CanvasRenderingContext2D) => {
+    if (circlesPatternRef.current) return circlesPatternRef.current;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 80;
+    offscreen.height = 80;
+    const octx = offscreen.getContext('2d')!;
+    octx.fillStyle = '#E5A93C'; octx.fillRect(0, 0, 80, 80);
+    octx.strokeStyle = '#B03232'; octx.lineWidth = 8;
+    octx.beginPath(); octx.arc(40, 40, 30, 0, Math.PI * 2); octx.stroke();
+    octx.strokeStyle = '#3252B0'; octx.lineWidth = 6;
+    octx.beginPath(); octx.arc(40, 40, 15, 0, Math.PI * 2); octx.stroke();
+    octx.fillStyle = '#F0D880'; octx.beginPath(); octx.arc(40, 40, 5, 0, Math.PI * 2); octx.fill();
+    circlesPatternRef.current = ctx.createPattern(offscreen, 'repeat');
+    return circlesPatternRef.current;
+  };
+
   const isHoveringBall = useRef(false);
   const isHoveringBlueControl = useRef(false);
   const isHoveringStop = useRef(false);
@@ -382,7 +436,26 @@ const PhysicsExperiment: React.FC = () => {
         ctx.save();
         const cx = s.x + s.width/2; const cy = s.y + s.height/2;
         ctx.translate(cx, cy); ctx.scale(s.animatedScale, s.animatedScale); ctx.translate(-cx, -cy);
-        ctx.fillStyle = s.color; ctx.fillRect(s.x, s.y, s.width, s.height);
+        let filled = false;
+        if (expandedSquareId === s.id && selectedPatternId !== null) {
+          let pat: CanvasPattern | null = null;
+          if (selectedPatternId === 'pat1' && pattern1ImageRef.current) {
+            pat = ctx.createPattern(pattern1ImageRef.current, 'repeat');
+          } else if (selectedPatternId === 'pat2') {
+            pat = getMondrianPattern(ctx);
+          } else if (selectedPatternId === 'pat3') {
+            pat = getCirclesPattern(ctx);
+          }
+          if (pat) {
+            ctx.fillStyle = pat;
+            ctx.fillRect(s.x, s.y, s.width, s.height);
+            filled = true;
+          }
+        }
+        if (!filled) {
+          ctx.fillStyle = s.color;
+          ctx.fillRect(s.x, s.y, s.width, s.height);
+        }
         if (isActive && expandedSquareId === null) {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'; ctx.beginPath();
           ctx.moveTo(s.x+s.width, s.y+s.height); ctx.lineTo(s.x+s.width-30, s.y+s.height); ctx.lineTo(s.x+s.width, s.y+s.height-30);
@@ -542,6 +615,57 @@ const PhysicsExperiment: React.FC = () => {
             isHoveringDot.current ? 'cursor-pointer' : ''} 
           ${isActive ? (isDragging ? 'cursor-grabbing' : isResizing ? 'cursor-nwse-resize' : '') : ''}`}
       />
+      {expandedSquareId !== null && (
+        <div className="absolute inset-x-0 bottom-12 flex flex-col items-center justify-end pointer-events-none z-20">
+          <div className="flex gap-8 pointer-events-auto animate-fade-in-up">
+            {/* Card 1 - Senefa Floral */}
+            <button
+              onClick={() => setSelectedPatternId('pat1')}
+              className={`w-28 h-28 md:w-32 md:h-32 rounded-2xl border-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-2xl shadow-black/40 hover:shadow-black/60 hover:scale-110 active:scale-95
+                ${selectedPatternId === 'pat1' ? 'border-white scale-105 ring-4 ring-black/20' : 'border-white/50 hover:border-white'}`}
+              style={{
+                backgroundImage: "url('/senefa1.png')",
+                backgroundSize: '80px',
+                backgroundRepeat: 'repeat'
+              }}
+              title="Senefa Retro Floral"
+            />
+
+            {/* Card 2 - Mondrian Bauhaus */}
+            <button
+              onClick={() => setSelectedPatternId('pat2')}
+              className={`w-28 h-28 md:w-32 md:h-32 rounded-2xl border-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-2xl shadow-black/40 hover:shadow-black/60 hover:scale-110 active:scale-95
+                ${selectedPatternId === 'pat2' ? 'border-white scale-105 ring-4 ring-black/20' : 'border-white/50 hover:border-white'}`}
+              style={{
+                backgroundColor: '#f8f8f8',
+                backgroundImage: `
+                  linear-gradient(90deg, #111 6px, transparent 6px),
+                  linear-gradient(#111 6px, transparent 6px),
+                  linear-gradient(90deg, #B03232 40px, transparent 40px),
+                  linear-gradient(#B09C32 60px, transparent 60px)
+                `,
+                backgroundSize: '120px 120px',
+                backgroundPosition: '0 0'
+              }}
+              title="Mondrian Bauhaus"
+            />
+
+            {/* Card 3 - Concentric Retro Circles */}
+            <button
+              onClick={() => setSelectedPatternId('pat3')}
+              className={`w-28 h-28 md:w-32 md:h-32 rounded-2xl border-4 transition-all duration-300 cursor-pointer overflow-hidden shadow-2xl shadow-black/40 hover:shadow-black/60 hover:scale-110 active:scale-95
+                ${selectedPatternId === 'pat3' ? 'border-white scale-105 ring-4 ring-black/20' : 'border-white/50 hover:border-white'}`}
+              style={{
+                backgroundColor: '#E5A93C',
+                backgroundImage: 'radial-gradient(circle, #3252B0 8px, #B03232 8px, #B03232 20px, #F0D880 20px, #F0D880 30px, transparent 30px)',
+                backgroundSize: '60px 60px',
+                backgroundPosition: 'center'
+              }}
+              title="Cercle Psicodèlic"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
